@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance App</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Quick attendance marking app">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        .btn-present {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-present:hover, .btn-present:active {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .btn-absent {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-absent:hover, .btn-absent:active {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .install-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e1e1;
+        }
+        
+        .install-btn {
+            background: #667eea;
+            color: white;
+            width: 100%;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .install-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .status-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Attendance App</h1>
+            <p class="subtitle">Quick attendance marking</p>
+        </div>
+        
+        <form id="attendanceForm">
+            <div class="form-group">
+                <label for="personName">Enter Your Name:</label>
+                <input type="text" id="personName" placeholder="e.g., John Doe" required autocomplete="name">
+            </div>
+            
+            <div class="button-group">
+                <button type="button" class="btn btn-present" onclick="markAttendance('Present')">
+                    ✅ Present
+                </button>
+                <button type="button" class="btn btn-absent" onclick="markAttendance('Absent')">
+                    ❌ Absent
+                </button>
+            </div>
+        </form>
+        
+        <div class="install-section">
+            <button id="installBtn" class="btn install-btn">
+                📱 Install App
+            </button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                Install this app on your phone for quick access
+            </p>
+        </div>
+        
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        // Replace this with your actual WhatsApp number (include country code)
+        const WHATSAPP_NUMBER = "+918778853182"; // Change this to your number
+        
+        // PWA Installation
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+        
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    showStatus('App installed successfully!', 'success');
+                }
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        });
+        
+        // Register service worker (only if sw.js exists)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {
+                console.log('Service worker not available - app will work without offline support');
+            });
+        }
+        
+        // Get current date and time
+        function getCurrentDateTime() {
+            const now = new Date();
+            const date = now.toLocaleDateString('en-IN');
+            const time = now.toLocaleTimeString('en-IN');
+            return { date, time };
+        }
+        
+        // Format message for WhatsApp
+        function formatMessage(name, status) {
+            const { date, time } = getCurrentDateTime();
+            return `🎯 ATTENDANCE REPORT
+            
+👤 Name: ${name}
+📅 Date: ${date}
+⏰ Time: ${time}
+✅ Status: ${status}
+
+Generated by Attendance App`;
+        }
+        
+        // Mark attendance function
+        function markAttendance(status) {
+            const nameInput = document.getElementById('personName');
+            const statusDiv = document.getElementById('statusMessage');
+            
+            // Validate name input
+            if (!nameInput.value.trim()) {
+                showStatus('Please enter your name', 'error');
+                nameInput.focus();
+                return;
+            }
+            
+            // Prepare message
+            const message = formatMessage(nameInput.value.trim(), status);
+            const phoneNumber = WHATSAPP_NUMBER.replace(/\D/g, ''); // Remove non-digits
+            
+            // Create WhatsApp URL
+            const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+            
+            // Show success message
+            showStatus(`Opening WhatsApp to send ${status} status...`, 'success');
+            
+            // Open WhatsApp
+            setTimeout(() => {
+                window.open(whatsappURL, '_blank');
+            }, 1000);
+            
+            // Clear the name field after successful submission
+            setTimeout(() => {
+                nameInput.value = '';
+            }, 1500);
+        }
+        
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Add enter key support
+        document.getElementById('personName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                markAttendance('Present');
+            }
+        });
+        
+        // Store last used name
+        const nameInput = document.getElementById('personName');
+        nameInput.addEventListener('input', function() {
+            localStorage.setItem('lastUsedName', this.value);
+        });
+        
+        // Load last used name
+        window.addEventListener('load', function() {
+            const lastUsedName = localStorage.getItem('lastUsedName');
+            if (lastUsedName) {
+                nameInput.value = lastUsedName;
+            }
+        });
+    </script>
+</body>
+</html>
